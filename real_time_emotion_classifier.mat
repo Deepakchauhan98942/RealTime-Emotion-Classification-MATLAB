@@ -1,0 +1,43 @@
+% Load pretrained emotion classifier
+load('emotionModel.mat');  % Must contain trainedModel or net
+
+% Setup webcam
+cam = webcam;
+faceDetector = vision.CascadeObjectDetector();
+
+% Emotion labels (update based on your model)
+emotions = {'Happy', 'Sad', 'Angry', 'Neutral', 'Surprised'};
+
+while true
+    % Capture frame
+    frame = snapshot(cam);
+    grayFrame = rgb2gray(frame);
+    
+    % Detect faces
+    bboxes = step(faceDetector, grayFrame);
+    
+    % Process each detected face
+    for i = 1:size(bboxes, 1)
+        face = imcrop(grayFrame, bboxes(i, :));
+        face = imresize(face, [48 48]);  % Resize to match training data
+
+        % Feature extraction (if required, or raw pixels)
+        features = double(face(:))';  % Flatten to 1D feature vector
+
+        % Predict emotion
+        labelIdx = predict(trainedModel, features);
+        label = emotions{labelIdx};
+
+        % Annotate frame
+        frame = insertObjectAnnotation(frame, 'rectangle', bboxes(i,:), label);
+    end
+    
+    imshow(frame);
+    title('Real-Time Emotion Detection');
+    
+    if waitforbuttonpress  % Press any key to stop
+        break;
+    end
+end
+
+clear cam;
